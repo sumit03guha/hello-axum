@@ -1,16 +1,17 @@
 use std::collections::HashMap;
 
 use axum::{
+    body::Body,
     extract::{Path, Query, Request},
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
-use serde::Deserialize;
-use serde_json::{json, Value};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, to_string_pretty, Value};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Identity {
     name: String,
     age: u32,
@@ -50,15 +51,19 @@ async fn call_with_query_params(Query(params): Query<HashMap<String, String>>) -
     "Hello"
 }
 
-async fn parse_json(Json(identity): Json<Identity>) -> Json<Value> {
+async fn parse_json(Json(identity): Json<Identity>) -> Response {
     println!(
         "The name is {} and the age is {}",
         identity.name, identity.age
     );
-    Json(json!({
-       "name": identity.name,
-       "age":identity.age
-    }))
+    // Json(json!({
+    //    "name": identity.name,
+    //    "age":identity.age
+    // }))
+
+    let json_data = to_string_pretty(&identity).unwrap();
+
+    Response::new(Body::new(json_data))
 }
 
 async fn parse_headers(req: Request) -> impl IntoResponse {
