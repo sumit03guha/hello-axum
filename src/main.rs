@@ -8,6 +8,7 @@ use axum::{
     Json, Router,
 };
 use serde::Deserialize;
+use serde_json::{json, Value};
 
 #[derive(Debug, Deserialize)]
 struct Identity {
@@ -49,12 +50,15 @@ async fn call_with_query_params(Query(params): Query<HashMap<String, String>>) -
     "Hello"
 }
 
-async fn parse_json(Json(identity): Json<Identity>) -> impl IntoResponse {
+async fn parse_json(Json(identity): Json<Identity>) -> Json<Value> {
     println!(
         "The name is {} and the age is {}",
         identity.name, identity.age
     );
-    (StatusCode::OK).into_response()
+    Json(json!({
+       "name": identity.name,
+       "age":identity.age
+    }))
 }
 
 async fn parse_headers(req: Request) -> impl IntoResponse {
