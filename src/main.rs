@@ -4,9 +4,16 @@ use axum::{
     extract::{Path, Query},
     http::StatusCode,
     response::IntoResponse,
-    routing::get,
-    Router,
+    routing::{get, post},
+    Json, Router,
 };
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+struct Identity {
+    Name: String,
+    Age: u32,
+}
 
 #[tokio::main]
 async fn main() {
@@ -21,6 +28,7 @@ fn app() -> Router {
         .route("/", get(hello_world))
         .route("/{id}", get(call_with_id))
         .route("/id", get(call_with_query_params))
+        .route("/identity", post(parse_json))
 }
 
 async fn hello_world() -> &'static str {
@@ -38,4 +46,12 @@ async fn call_with_query_params(Query(params): Query<HashMap<String, String>>) -
     }
 
     "Hello"
+}
+
+async fn parse_json(Json(identity): Json<Identity>) -> impl IntoResponse {
+    println!(
+        "The name is {} and the age is {}",
+        identity.Name, identity.Age
+    );
+    (StatusCode::OK).into_response()
 }
