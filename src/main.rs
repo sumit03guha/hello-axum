@@ -32,6 +32,7 @@ fn app() -> Router {
         .route("/id", get(call_with_query_params))
         .route("/identity", post(parse_json))
         .route("/headers", post(parse_headers))
+        .route("/status-code", post(returns_with_status_code))
 }
 
 async fn hello_world() -> &'static str {
@@ -51,7 +52,7 @@ async fn call_with_query_params(Query(params): Query<HashMap<String, String>>) -
     "Hello"
 }
 
-async fn parse_json(Json(identity): Json<Identity>) -> impl IntoResponse {
+async fn parse_json(Json(identity): Json<Identity>) -> Response {
     println!(
         "The name is {} and the age is {}",
         identity.name, identity.age
@@ -63,7 +64,11 @@ async fn parse_json(Json(identity): Json<Identity>) -> impl IntoResponse {
 
     let json_data = to_string_pretty(&identity).unwrap();
 
-    (StatusCode::CREATED, json_data)
+    Response::new(Body::new(json_data))
+}
+
+async fn returns_with_status_code() -> impl IntoResponse {
+    (StatusCode::OK, "Okay!")
 }
 
 async fn parse_headers(req: Request) -> impl IntoResponse {
