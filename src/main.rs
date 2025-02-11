@@ -1,4 +1,4 @@
-use axum::{routing::get, Router};
+use axum::{extract::Path, http::StatusCode, response::IntoResponse, routing::get, Router};
 
 #[tokio::main]
 async fn main() {
@@ -9,9 +9,16 @@ async fn main() {
 }
 
 fn app() -> Router {
-    Router::new().route("/", get(hello_world))
+    Router::new()
+        .route("/", get(hello_world))
+        .route("/{id}", get(call_with_id))
 }
 
 async fn hello_world() -> &'static str {
     "Hello World!"
+}
+
+async fn call_with_id(Path(id): Path<u32>) -> impl IntoResponse {
+    println!("Id : {id}");
+    (StatusCode::OK, format!("Hello from {id}")).into_response()
 }
