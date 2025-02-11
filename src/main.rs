@@ -11,8 +11,8 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct Identity {
-    Name: String,
-    Age: u32,
+    name: String,
+    age: u32,
 }
 
 #[tokio::main]
@@ -51,7 +51,7 @@ async fn call_with_query_params(Query(params): Query<HashMap<String, String>>) -
 async fn parse_json(Json(identity): Json<Identity>) -> impl IntoResponse {
     println!(
         "The name is {} and the age is {}",
-        identity.Name, identity.Age
+        identity.name, identity.age
     );
     (StatusCode::OK).into_response()
 }
