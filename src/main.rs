@@ -51,7 +51,7 @@ async fn call_with_query_params(Query(params): Query<HashMap<String, String>>) -
     "Hello"
 }
 
-async fn parse_json(Json(identity): Json<Identity>) -> Response {
+async fn parse_json(Json(identity): Json<Identity>) -> impl IntoResponse {
     println!(
         "The name is {} and the age is {}",
         identity.name, identity.age
@@ -63,7 +63,7 @@ async fn parse_json(Json(identity): Json<Identity>) -> Response {
 
     let json_data = to_string_pretty(&identity).unwrap();
 
-    Response::new(Body::new(json_data))
+    (StatusCode::CREATED, json_data)
 }
 
 async fn parse_headers(req: Request) -> impl IntoResponse {
