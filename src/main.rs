@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use axum::{
-    extract::{Path, Query},
+    extract::{Path, Query, Request},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -29,6 +29,7 @@ fn app() -> Router {
         .route("/{id}", get(call_with_id))
         .route("/id", get(call_with_query_params))
         .route("/identity", post(parse_json))
+        .route("/headers", post(parse_headers))
 }
 
 async fn hello_world() -> &'static str {
@@ -54,4 +55,16 @@ async fn parse_json(Json(identity): Json<Identity>) -> impl IntoResponse {
         identity.name, identity.age
     );
     (StatusCode::OK).into_response()
+}
+
+async fn parse_headers(req: Request) -> impl IntoResponse {
+    let headers = req.headers();
+    let method = req.method();
+    let uri = req.uri();
+    let version = req.version();
+
+    println!(
+        "The header details are : {:#?}, {:#?}, {:#?}, {:#?}",
+        headers, method, uri, version
+    );
 }
