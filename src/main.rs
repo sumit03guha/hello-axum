@@ -1,8 +1,11 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use axum::{
     body::Body,
-    extract::{Path, Query, Request},
+    extract::{Path, Query, Request, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -17,6 +20,9 @@ struct Identity {
     age: u32,
 }
 
+#[derive(Debug)]
+struct Counter(u32);
+
 #[tokio::main]
 async fn main() {
     let app = app();
@@ -26,6 +32,7 @@ async fn main() {
 }
 
 fn app() -> Router {
+    let shared_state = Arc::new(Mutex::new(Counter(1)));
     Router::new()
         .route("/", get(hello_world))
         .route("/{id}", get(call_with_id))
@@ -33,6 +40,10 @@ fn app() -> Router {
         .route("/identity", post(parse_json))
         .route("/headers", post(parse_headers))
         .route("/status-code", post(returns_with_status_code))
+        .route("/counter", get(get_counter))
+        .with_state(Arc::clone(&shared_state))
+        .route("/counter", post(increase_counter))
+        .with_state(Arc::clone(&shared_state))
 }
 
 async fn hello_world() -> &'static str {
@@ -81,4 +92,16 @@ async fn parse_headers(req: Request) -> impl IntoResponse {
         "The header details are : {:#?}, {:#?}, {:#?}, {:#?}",
         headers, method, uri, version
     );
+}
+
+async fn get_counter(State(counter): State<Arc<Mutex<Counter>>>) -> impl IntoResponse {
+    let count = counter;
+    (StatusCode::OK, format!("The count is : {:?}", count)).into_response()
+}
+
+async fn increase_counter(State(counter): State<Arc<Mutex<Counter>>>) -> impl IntoResponse {
+    let mut counter = counter.lock().unwrap();
+    counter.0 += 1;
+
+    (StatusCode::OK, "The count has been increased.").into_response()
 }
