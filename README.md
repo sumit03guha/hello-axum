@@ -12,4 +12,5 @@
 ✅ Response Type\
 ✅ IntoResponse\
 ✅ Share State\
-✅ Fallback and Not Found
+✅ Fallback and Not Found\
+✅ Middleware
