@@ -44,6 +44,7 @@ fn app() -> Router {
         .with_state(Arc::clone(&shared_state))
         .route("/counter", post(increase_counter))
         .with_state(Arc::clone(&shared_state))
+        .fallback(not_found)
 }
 
 async fn hello_world() -> &'static str {
@@ -104,4 +105,8 @@ async fn increase_counter(State(counter): State<Arc<Mutex<Counter>>>) -> impl In
     counter.0 += 1;
 
     (StatusCode::OK, "The count has been increased.").into_response()
+}
+
+async fn not_found() -> impl IntoResponse {
+    (StatusCode::NOT_FOUND, "404 | Not Found").into_response()
 }

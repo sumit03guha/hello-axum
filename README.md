@@ -11,4 +11,5 @@
 ✅ Response JSON\
 ✅ Response Type\
 ✅ IntoResponse\
-✅ Share State
+✅ Share State\
+✅ Fallback and Not Found
