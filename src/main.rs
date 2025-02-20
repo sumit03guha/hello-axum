@@ -10,7 +10,7 @@ use axum::{
     middleware::{self, from_fn, Next},
     response::{IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
+    Extension, Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, to_string_pretty, Value};
@@ -36,6 +36,7 @@ fn app() -> Router {
     let shared_state = Arc::new(Mutex::new(Counter(1)));
     Router::new()
         .route("/", get(hello_world))
+        .route("hello", get(hello).route_layer(from_fn(mid_to_request)))
         .route(
             "/{id}",
             get(call_with_id).route_layer(from_fn(call_with_id_middleware)),
@@ -130,4 +131,18 @@ async fn call_with_id_middleware(request: Request, next: Next) -> impl IntoRespo
     } else {
         (StatusCode::OK, "Wrong input").into_response()
     }
+}
+
+async fn hello(Extension(identity): Extension<Arc<Identity>>) -> &'static str {
+    "Hello"
+}
+
+async fn mid_to_request(mut request: Request, next: Next) -> impl IntoResponse {
+    let identity = Identity {
+        name: String::from("John Doe"),
+        age: 29,
+    };
+
+    request.extensions_mut().insert(Arc::new(identity));
+    next.run(request).await
 }
