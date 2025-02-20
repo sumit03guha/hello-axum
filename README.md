@@ -13,4 +13,5 @@
 ✅ IntoResponse\
 ✅ Share State\
 ✅ Fallback and Not Found\
-✅ Middleware
+✅ Middleware\
+✅ Extensions
