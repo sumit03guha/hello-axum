@@ -36,7 +36,7 @@ fn app() -> Router {
     let shared_state = Arc::new(Mutex::new(Counter(1)));
     Router::new()
         .route("/", get(hello_world))
-        .route("hello", get(hello).route_layer(from_fn(mid_to_request)))
+        .route("/hello", get(hello).route_layer(from_fn(middleware_to_request)))
         .route(
             "/{id}",
             get(call_with_id).route_layer(from_fn(call_with_id_middleware)),
@@ -134,10 +134,11 @@ async fn call_with_id_middleware(request: Request, next: Next) -> impl IntoRespo
 }
 
 async fn hello(Extension(identity): Extension<Arc<Identity>>) -> &'static str {
+    println!("Identity : {:?}", identity);
     "Hello"
 }
 
-async fn mid_to_request(mut request: Request, next: Next) -> impl IntoResponse {
+async fn middleware_to_request(mut request: Request, next: Next) -> impl IntoResponse {
     let identity = Identity {
         name: String::from("John Doe"),
         age: 29,
