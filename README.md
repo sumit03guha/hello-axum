@@ -14,4 +14,5 @@
 ✅ Share State\
 ✅ Fallback and Not Found\
 ✅ Middleware\
-✅ Extensions
+✅ Extensions\
+✅ Redirect
