@@ -8,7 +8,7 @@ use axum::{
     extract::{Path, Query, Request, State},
     http::StatusCode,
     middleware::{self, from_fn, Next},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
     routing::{get, post},
     Extension, Json, Router,
 };
@@ -36,7 +36,10 @@ fn app() -> Router {
     let shared_state = Arc::new(Mutex::new(Counter(1)));
     Router::new()
         .route("/", get(hello_world))
-        .route("/hello", get(hello).route_layer(from_fn(middleware_to_request)))
+        .route(
+            "/hello",
+            get(hello).route_layer(from_fn(middleware_to_request)),
+        )
         .route(
             "/{id}",
             get(call_with_id).route_layer(from_fn(call_with_id_middleware)),
@@ -51,6 +54,7 @@ fn app() -> Router {
         .with_state(Arc::clone(&shared_state))
         .fallback(not_found)
         .layer(from_fn(global_middleware))
+        .route("/redirect-to-hello", get(redirect))
 }
 
 async fn hello_world() -> &'static str {
@@ -146,4 +150,8 @@ async fn middleware_to_request(mut request: Request, next: Next) -> impl IntoRes
 
     request.extensions_mut().insert(Arc::new(identity));
     next.run(request).await
+}
+
+async fn redirect() -> impl IntoResponse {
+    Redirect::to("/hello")
 }
