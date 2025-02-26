@@ -15,4 +15,5 @@
 ✅ Fallback and Not Found\
 ✅ Middleware\
 ✅ Extensions\
-✅ Redirect
+✅ Redirect\
+✅ CRUD Operations in single route
