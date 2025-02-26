@@ -9,7 +9,7 @@ use axum::{
     http::StatusCode,
     middleware::{self, from_fn, Next},
     response::{IntoResponse, Redirect, Response},
-    routing::{get, post},
+    routing::{get, post, put},
     Extension, Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -21,8 +21,10 @@ struct Identity {
     age: u32,
 }
 
-#[derive(Debug)]
-struct Counter(u32);
+#[derive(Debug, Serialize, Deserialize)]
+struct Counter {
+    value: u32,
+}
 
 #[tokio::main]
 async fn main() {
@@ -33,7 +35,7 @@ async fn main() {
 }
 
 fn app() -> Router {
-    let shared_state = Arc::new(Mutex::new(Counter(1)));
+    let shared_state = Arc::new(Mutex::new(Counter { value: 1 }));
     Router::new()
         .route("/", get(hello_world))
         .route(
@@ -48,9 +50,14 @@ fn app() -> Router {
         .route("/identity", post(parse_json))
         .route("/headers", post(parse_headers))
         .route("/status-code", post(returns_with_status_code))
-        .route("/counter", get(get_counter))
         .with_state(Arc::clone(&shared_state))
-        .route("/counter", post(increase_counter))
+        .route(
+            "/counter",
+            post(increase_counter)
+                .get(get_counter)
+                .put(put_counter)
+                .delete(delete_counter),
+        )
         .with_state(Arc::clone(&shared_state))
         .fallback(not_found)
         .layer(from_fn(global_middleware))
@@ -110,9 +117,29 @@ async fn get_counter(State(counter): State<Arc<Mutex<Counter>>>) -> impl IntoRes
     (StatusCode::OK, format!("The count is : {:?}", count)).into_response()
 }
 
+async fn put_counter(
+    State(counter): State<Arc<Mutex<Counter>>>,
+    Json(c): Json<Counter>,
+) -> impl IntoResponse {
+    let put_value = c.value;
+    let mut counter = counter.lock().unwrap();
+    counter.value = put_value;
+
+    let json_data = to_string_pretty(&*counter).unwrap();
+
+    Response::new(Body::new(json_data))
+}
+
+async fn delete_counter(State(counter): State<Arc<Mutex<Counter>>>) -> impl IntoResponse {
+    let mut counter = counter.lock().unwrap();
+    counter.value = 0;
+
+    (StatusCode::OK, "The counter has been deleted.").into_response()
+}
+
 async fn increase_counter(State(counter): State<Arc<Mutex<Counter>>>) -> impl IntoResponse {
     let mut counter = counter.lock().unwrap();
-    counter.0 += 1;
+    counter.value += 1;
 
     (StatusCode::OK, "The count has been increased.").into_response()
 }
