@@ -17,4 +17,5 @@
 ✅ Extensions\
 ✅ Redirect\
 ✅ CRUD Operations in single route\
-✅ Nested routes
+✅ Nested routes\
+✅ Merge routes
