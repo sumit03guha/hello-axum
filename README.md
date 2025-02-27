@@ -16,4 +16,5 @@
 ✅ Middleware\
 ✅ Extensions\
 ✅ Redirect\
-✅ CRUD Operations in single route
+✅ CRUD Operations in single route\
+✅ Nested routes
