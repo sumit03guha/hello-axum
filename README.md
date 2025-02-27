@@ -18,4 +18,5 @@
 ✅ Redirect\
 ✅ CRUD Operations in single route\
 ✅ Nested routes\
-✅ Merge routes
+✅ Merge routes\
+✅ Wildcard route
