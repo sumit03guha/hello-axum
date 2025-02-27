@@ -36,8 +36,11 @@ async fn main() {
 
 fn app() -> Router {
     let shared_state = Arc::new(Mutex::new(Counter { value: 1 }));
+    let user_router = Router::new().route("/profile", get(profile));
+
     Router::new()
         .route("/", get(hello_world))
+        .nest("/user", user_router)
         .route(
             "/hello",
             get(hello).route_layer(from_fn(middleware_to_request)),
@@ -181,4 +184,8 @@ async fn middleware_to_request(mut request: Request, next: Next) -> impl IntoRes
 
 async fn redirect() -> impl IntoResponse {
     Redirect::to("/hello")
+}
+
+async fn profile() -> impl IntoResponse {
+    (StatusCode::OK, "Profile")
 }
