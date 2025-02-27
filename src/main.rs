@@ -47,6 +47,7 @@ fn app() -> Router {
             "/hello",
             get(hello).route_layer(from_fn(middleware_to_request)),
         )
+        .route("/wildcard/{*rest}", get(wildcard_route))
         .route(
             "/{id}",
             get(call_with_id).route_layer(from_fn(call_with_id_middleware)),
@@ -194,4 +195,10 @@ async fn profile() -> impl IntoResponse {
 
 async fn about() -> impl IntoResponse {
     (StatusCode::OK, "About")
+}
+
+async fn wildcard_route(Path(wildcard): Path<String>) -> impl IntoResponse {
+    println!("Wildcard route : {}", wildcard);
+
+    (StatusCode::OK, wildcard)
 }
