@@ -6,7 +6,7 @@ use std::{
 use axum::{
     body::Body,
     extract::{Path, Query, Request, State},
-    http::StatusCode,
+    http::{StatusCode, Uri},
     middleware::{self, from_fn, Next},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post, put},
@@ -68,6 +68,7 @@ fn app() -> Router {
         .fallback(not_found)
         .layer(from_fn(global_middleware))
         .route("/redirect-to-hello", get(redirect))
+        .route("/a/big/uri", get(get_uri))
 }
 
 async fn hello_world() -> &'static str {
@@ -201,4 +202,9 @@ async fn wildcard_route(Path(wildcard): Path<String>) -> impl IntoResponse {
     println!("Wildcard route : {}", wildcard);
 
     (StatusCode::OK, wildcard)
+}
+
+async fn get_uri(uri: Uri) -> impl IntoResponse {
+    println!("The uri is : {:#?}", uri);
+    (StatusCode::OK, uri.to_string())
 }
