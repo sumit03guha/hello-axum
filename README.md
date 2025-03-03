@@ -19,4 +19,5 @@
 ✅ CRUD Operations in single route\
 ✅ Nested routes\
 ✅ Merge routes\
-✅ Wildcard route
+✅ Wildcard route\
+✅ URI
