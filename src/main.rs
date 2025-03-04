@@ -38,6 +38,8 @@ fn app() -> Router {
     let shared_state = Arc::new(Mutex::new(Counter { value: 1 }));
     let user_router = Router::new().route("/profile", get(profile));
     let about_router = Router::new().route("/about", get(about));
+    let another_nested_shared_router: Router<Arc<Mutex<Counter>>> =
+        Router::new().route("/new", get(nested_shared_route));
 
     Router::new()
         .route("/", get(hello_world))
@@ -70,6 +72,8 @@ fn app() -> Router {
         .route("/redirect-to-hello", get(redirect))
         .route("/a/big/uri", get(get_uri))
         .route("/submit-form", post(submit_form))
+        .nest("/nested", another_nested_shared_router)
+        .with_state(Arc::clone(&shared_state))
 }
 
 async fn hello_world() -> &'static str {
@@ -213,4 +217,9 @@ async fn get_uri(uri: Uri) -> impl IntoResponse {
 async fn submit_form(Form(identity): Form<Identity>) -> impl IntoResponse {
     println!("The form is : {:#?}", identity);
     StatusCode::OK
+}
+
+async fn nested_shared_route(State(state): State<Arc<Mutex<Counter>>>) -> impl IntoResponse {
+    println!("The shared state is : {:?}", state);
+    (StatusCode::OK, "Okay")
 }
