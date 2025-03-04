@@ -10,7 +10,7 @@ use axum::{
     middleware::{self, from_fn, Next},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post, put},
-    Extension, Json, Router,
+    Extension, Form, Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, to_string_pretty, Value};
@@ -69,6 +69,7 @@ fn app() -> Router {
         .layer(from_fn(global_middleware))
         .route("/redirect-to-hello", get(redirect))
         .route("/a/big/uri", get(get_uri))
+        .route("/submit-form", post(submit_form))
 }
 
 async fn hello_world() -> &'static str {
@@ -207,4 +208,9 @@ async fn wildcard_route(Path(wildcard): Path<String>) -> impl IntoResponse {
 async fn get_uri(uri: Uri) -> impl IntoResponse {
     println!("The uri is : {:#?}", uri);
     (StatusCode::OK, uri.to_string())
+}
+
+async fn submit_form(Form(identity): Form<Identity>) -> impl IntoResponse {
+    println!("The form is : {:#?}", identity);
+    StatusCode::OK
 }
