@@ -20,7 +20,7 @@ use argon2::{
     Argon2,
 };
 
-use mongodb::{bson::doc, Client, Collection};
+use mongodb::{bson::doc, Client, Collection, Database};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Identity {
@@ -48,15 +48,16 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn db() -> Client {
+async fn db() -> Database {
     let uri = "mongodb://localhost:27017/";
     // Create a new client and connect to the server
     let client = Client::with_uri_str(uri).await.unwrap();
+    let database = client.database("hello_axum");
 
-    client
+    database
 }
 
-fn app(client: Client) -> Router {
+fn app(database: Database) -> Router {
     let shared_state = Arc::new(Mutex::new(Counter { value: 1 }));
     let user_router = Router::new().route("/profile", get(profile));
     let about_router = Router::new().route("/about", get(about));
@@ -101,7 +102,7 @@ fn app(client: Client) -> Router {
         .nest("/nested", another_nested_shared_router)
         .with_state(Arc::clone(&shared_state))
         .nest("/auth", signup_router)
-        .with_state(Arc::new(client))
+        .with_state(Arc::new(database))
 }
 
 async fn hello_world() -> &'static str {
@@ -252,12 +253,10 @@ async fn nested_shared_route(State(state): State<Arc<Mutex<Counter>>>) -> impl I
     (StatusCode::OK, "Okay")
 }
 
-async fn signup(State(client): State<Arc<Client>>, Json(input): Json<Auth>) -> impl IntoResponse {
-    println!(
-        "Username : {} ; Password : {}",
-        input.user_name, input.password
-    );
-
+async fn signup(
+    State(database): State<Arc<Database>>,
+    Json(input): Json<Auth>,
+) -> impl IntoResponse {
     let salt: SaltString = SaltString::generate(&mut OsRng);
 
     // Argon2 with default params (Argon2id v19)
@@ -269,9 +268,6 @@ async fn signup(State(client): State<Arc<Client>>, Json(input): Json<Auth>) -> i
         .unwrap()
         .to_string();
 
-    println!("Pwd hash : {}", password_hash);
-
-    let database = client.database("hello_axum");
     let users_collection: Collection<Auth> = database.collection("users");
     let result = users_collection
         .insert_one(Auth {
@@ -285,8 +281,10 @@ async fn signup(State(client): State<Arc<Client>>, Json(input): Json<Auth>) -> i
     (StatusCode::OK, "User signed up")
 }
 
-async fn signin(State(client): State<Arc<Client>>, Json(input): Json<Auth>) -> impl IntoResponse {
-    let database = client.database("hello_axum");
+async fn signin(
+    State(database): State<Arc<Database>>,
+    Json(input): Json<Auth>,
+) -> impl IntoResponse {
     let users_collection: Collection<Auth> = database.collection("users");
 
     if let Some(result) = users_collection
