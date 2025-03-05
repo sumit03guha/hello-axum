@@ -7,18 +7,20 @@ use axum::{
     body::Body,
     extract::{Path, Query, Request, State},
     http::{StatusCode, Uri},
-    middleware::{self, from_fn, Next},
+    middleware::{from_fn, Next},
     response::{IntoResponse, Redirect, Response},
-    routing::{get, post, put},
+    routing::{get, post},
     Extension, Form, Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{json, to_string_pretty, Value};
+use serde_json::to_string_pretty;
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
+
+use mongodb::{bson::doc, Client, Collection};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Identity {
@@ -31,7 +33,7 @@ struct Counter {
     value: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Auth {
     user_name: String,
     password: String,
@@ -39,13 +41,33 @@ struct Auth {
 
 #[tokio::main]
 async fn main() {
-    let app = app();
+    let client = db().await;
+    // // Get a handle on the movies collection
+    // let database = client.database("sample_mflix");
+    // let my_coll: Collection<Document> = database.collection("movies");
+    // // Find a movie based on the title value
+    // let my_movie = my_coll
+    //     .find_one(doc! { "title": "The Perils of Pauline" })
+    //     .await
+    //     .unwrap();
+    // // Print the document
+    // println!("Found a movie:\n{:#?}", my_movie);
+
+    let app = app(client);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Running on : {:?}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
 
-fn app() -> Router {
+async fn db() -> Client {
+    let uri = "mongodb://localhost:27017/";
+    // Create a new client and connect to the server
+    let client = Client::with_uri_str(uri).await.unwrap();
+
+    client
+}
+
+fn app(client: Client) -> Router {
     let shared_state = Arc::new(Mutex::new(Counter { value: 1 }));
     let user_router = Router::new().route("/profile", get(profile));
     let about_router = Router::new().route("/about", get(about));
@@ -88,6 +110,7 @@ fn app() -> Router {
         .nest("/nested", another_nested_shared_router)
         .with_state(Arc::clone(&shared_state))
         .nest("/auth", signup_router)
+        .with_state(Arc::new(client))
 }
 
 async fn hello_world() -> &'static str {
@@ -238,7 +261,7 @@ async fn nested_shared_route(State(state): State<Arc<Mutex<Counter>>>) -> impl I
     (StatusCode::OK, "Okay")
 }
 
-async fn signup(Json(input): Json<Auth>) -> impl IntoResponse {
+async fn signup(State(client): State<Arc<Client>>, Json(input): Json<Auth>) -> impl IntoResponse {
     println!(
         "Username : {} ; Password : {}",
         input.user_name, input.password
@@ -257,5 +280,16 @@ async fn signup(Json(input): Json<Auth>) -> impl IntoResponse {
 
     println!("Pwd hash : {}", password_hash);
 
+    let database = client.database("hello_axum");
+    let users_collection: Collection<Auth> = database.collection("users");
+    let result = users_collection
+        .insert_one(Auth {
+            user_name: input.user_name,
+            password: password_hash,
+        })
+        .await
+        .unwrap();
+
+    println!("Inserted a document with _id: {}", result.inserted_id);
     (StatusCode::OK, "User signed up")
 }
