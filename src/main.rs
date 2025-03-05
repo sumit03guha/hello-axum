@@ -63,7 +63,9 @@ fn app(client: Client) -> Router {
     let another_nested_shared_router: Router<Arc<Mutex<Counter>>> =
         Router::new().route("/new", get(nested_shared_route));
 
-    let signup_router = Router::new().route("/signup", post(signup));
+    let signup_router = Router::new()
+        .route("/signup", post(signup))
+        .route("/signin", post(signin));
 
     Router::new()
         .route("/", get(hello_world))
@@ -281,4 +283,29 @@ async fn signup(State(client): State<Arc<Client>>, Json(input): Json<Auth>) -> i
 
     println!("Inserted a document with _id: {}", result.inserted_id);
     (StatusCode::OK, "User signed up")
+}
+
+async fn signin(State(client): State<Arc<Client>>, Json(input): Json<Auth>) -> impl IntoResponse {
+    let database = client.database("hello_axum");
+    let users_collection: Collection<Auth> = database.collection("users");
+
+    if let Some(result) = users_collection
+        .find_one(doc! {
+            "user_name": input.user_name
+        })
+        .await
+        .unwrap()
+    {
+        let parsed_hash = PasswordHash::new(&result.password).unwrap();
+        if Argon2::default()
+            .verify_password(input.password.as_bytes(), &parsed_hash)
+            .is_ok()
+        {
+            (StatusCode::OK, "Signed in").into_response()
+        } else {
+            (StatusCode::BAD_REQUEST, "Invalid password").into_response()
+        }
+    } else {
+        (StatusCode::NOT_FOUND, "User does not exist").into_response()
+    }
 }
