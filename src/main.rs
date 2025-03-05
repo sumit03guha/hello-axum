@@ -42,17 +42,6 @@ struct Auth {
 #[tokio::main]
 async fn main() {
     let client = db().await;
-    // // Get a handle on the movies collection
-    // let database = client.database("sample_mflix");
-    // let my_coll: Collection<Document> = database.collection("movies");
-    // // Find a movie based on the title value
-    // let my_movie = my_coll
-    //     .find_one(doc! { "title": "The Perils of Pauline" })
-    //     .await
-    //     .unwrap();
-    // // Print the document
-    // println!("Found a movie:\n{:#?}", my_movie);
-
     let app = app(client);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Running on : {:?}", listener.local_addr().unwrap());
