@@ -15,6 +15,11 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, to_string_pretty, Value};
 
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Identity {
     name: String,
@@ -238,5 +243,19 @@ async fn signup(Json(input): Json<Auth>) -> impl IntoResponse {
         "Username : {} ; Password : {}",
         input.user_name, input.password
     );
+
+    let salt: SaltString = SaltString::generate(&mut OsRng);
+
+    // Argon2 with default params (Argon2id v19)
+    let argon2: Argon2<'_> = Argon2::default();
+
+    // Hash password to PHC string ($argon2id$v=19$...)
+    let password_hash = argon2
+        .hash_password(input.password.as_bytes(), &salt)
+        .unwrap()
+        .to_string();
+
+    println!("Pwd hash : {}", password_hash);
+
     (StatusCode::OK, "User signed up")
 }
