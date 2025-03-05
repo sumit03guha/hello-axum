@@ -26,6 +26,12 @@ struct Counter {
     value: u32,
 }
 
+#[derive(Debug, Deserialize)]
+struct Auth {
+    user_name: String,
+    password: String,
+}
+
 #[tokio::main]
 async fn main() {
     let app = app();
@@ -40,6 +46,8 @@ fn app() -> Router {
     let about_router = Router::new().route("/about", get(about));
     let another_nested_shared_router: Router<Arc<Mutex<Counter>>> =
         Router::new().route("/new", get(nested_shared_route));
+
+    let signup_router = Router::new().route("/signup", post(signup));
 
     Router::new()
         .route("/", get(hello_world))
@@ -74,6 +82,7 @@ fn app() -> Router {
         .route("/submit-form", post(submit_form))
         .nest("/nested", another_nested_shared_router)
         .with_state(Arc::clone(&shared_state))
+        .nest("/auth", signup_router)
 }
 
 async fn hello_world() -> &'static str {
@@ -222,4 +231,12 @@ async fn submit_form(Form(identity): Form<Identity>) -> impl IntoResponse {
 async fn nested_shared_route(State(state): State<Arc<Mutex<Counter>>>) -> impl IntoResponse {
     println!("The shared state is : {:?}", state);
     (StatusCode::OK, "Okay")
+}
+
+async fn signup(Json(input): Json<Auth>) -> impl IntoResponse {
+    println!(
+        "Username : {} ; Password : {}",
+        input.user_name, input.password
+    );
+    (StatusCode::OK, "User signed up")
 }
