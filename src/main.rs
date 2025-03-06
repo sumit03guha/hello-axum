@@ -301,7 +301,7 @@ async fn signin(
         {
             (StatusCode::OK, "Signed in").into_response()
         } else {
-            (StatusCode::BAD_REQUEST, "Invalid password").into_response()
+            (StatusCode::UNAUTHORIZED, "Invalid password").into_response()
         }
     } else {
         (StatusCode::NOT_FOUND, "User does not exist").into_response()
