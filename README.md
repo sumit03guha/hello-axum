@@ -24,4 +24,5 @@
 ✅ Form - (x-www-form-urlencoded)\
 ✅ Share state to nested routes\
 ✅ Sign Up\
-✅ Sign In
+✅ Sign In\
+✅ Generate JWT token
