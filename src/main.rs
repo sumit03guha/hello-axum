@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use axum::{
@@ -22,6 +23,10 @@ use argon2::{
 
 use mongodb::{bson::doc, Client, Collection, Database};
 
+use jsonwebtoken::{
+    decode, encode, get_current_timestamp, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+};
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Identity {
     name: String,
@@ -37,6 +42,12 @@ struct Counter {
 struct Auth {
     user_name: String,
     password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    sub: String,
+    exp: u64,
 }
 
 #[tokio::main]
@@ -289,7 +300,7 @@ async fn signin(
 
     if let Some(result) = users_collection
         .find_one(doc! {
-            "user_name": input.user_name
+            "user_name": &input.user_name
         })
         .await
         .unwrap()
@@ -299,11 +310,34 @@ async fn signin(
             .verify_password(input.password.as_bytes(), &parsed_hash)
             .is_ok()
         {
-            (StatusCode::OK, "Signed in").into_response()
+            let token = generate_token(&input.user_name);
+            match token {
+                Ok(token) => {
+                    println!("JWT token : {}", token);
+                    (StatusCode::OK, "Signed in").into_response()
+                }
+                Err(e) => {
+                    eprintln!("Error generating token : {}", e);
+                    (StatusCode::INTERNAL_SERVER_ERROR, "Error generating token").into_response()
+                }
+            }
         } else {
             (StatusCode::UNAUTHORIZED, "Invalid password").into_response()
         }
     } else {
         (StatusCode::NOT_FOUND, "User does not exist").into_response()
     }
+}
+
+fn generate_token(username: &str) -> Result<String, jsonwebtoken::errors::Error> {
+    let key = b"secret";
+    let my_claims = Claims {
+        sub: username.to_string(),
+        exp: get_current_timestamp() + Duration::new(60, 0).as_secs(),
+    };
+    encode(
+        &Header::default(),
+        &my_claims,
+        &EncodingKey::from_secret(key),
+    )
 }
