@@ -14,7 +14,7 @@ use axum::{
     Extension, Form, Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::to_string_pretty;
+use serde_json::{json, to_string_pretty};
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
@@ -48,6 +48,12 @@ struct Auth {
 struct Claims {
     sub: String,
     exp: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ResponseData<T> {
+    message: String,
+    data: T,
 }
 
 #[tokio::main]
@@ -313,8 +319,15 @@ async fn signin(
             let token = generate_token(&input.user_name);
             match token {
                 Ok(token) => {
-                    println!("JWT token : {}", token);
-                    (StatusCode::OK, "Signed in").into_response()
+                    let result = ResponseData {
+                        message: "Signed in".to_string(),
+                        data: token,
+                    };
+                    (
+                        StatusCode::OK,
+                        Body::new(to_string_pretty(&result).unwrap()),
+                    )
+                        .into_response()
                 }
                 Err(e) => {
                     eprintln!("Error generating token : {}", e);
