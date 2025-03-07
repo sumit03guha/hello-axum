@@ -81,9 +81,13 @@ fn app(database: Database) -> Router {
     let another_nested_shared_router: Router<Arc<Mutex<Counter>>> =
         Router::new().route("/new", get(nested_shared_route));
 
-    let signup_router = Router::new()
+    let auth_router = Router::new()
         .route("/signup", post(signup))
-        .route("/signin", post(signin));
+        .route("/signin", post(signin))
+        .route(
+            "/protected",
+            get(protected).route_layer(from_fn(login_required)),
+        );
 
     Router::new()
         .route("/", get(hello_world))
@@ -118,7 +122,7 @@ fn app(database: Database) -> Router {
         .route("/submit-form", post(submit_form))
         .nest("/nested", another_nested_shared_router)
         .with_state(Arc::clone(&shared_state))
-        .nest("/auth", signup_router)
+        .nest("/auth", auth_router)
         .with_state(Arc::new(database))
 }
 
@@ -353,4 +357,33 @@ fn generate_token(username: &str) -> Result<String, jsonwebtoken::errors::Error>
         &my_claims,
         &EncodingKey::from_secret(key),
     )
+}
+
+async fn protected(Extension(username): Extension<String>) -> impl IntoResponse {
+    let response = format!("Hello {}", username);
+    (StatusCode::OK, response)
+}
+
+async fn login_required(mut req: Request, next: Next) -> impl IntoResponse {
+    let headers = req.headers().get("Authorization");
+
+    match headers {
+        Some(value) => {
+            let token = value.to_str().unwrap();
+            match decode::<Claims>(
+                &token,
+                &DecodingKey::from_secret(b"secret"),
+                &Validation::default(),
+            ) {
+                Ok(token_data) => {
+                    let claims = token_data.claims;
+                    let username = claims.sub;
+                    req.extensions_mut().insert(username);
+                    next.run(req).await
+                }
+                Err(err) => (StatusCode::UNAUTHORIZED, err.to_string()).into_response(),
+            }
+        }
+        None => (StatusCode::UNAUTHORIZED, "Missing auth token").into_response(),
+    }
 }
