@@ -25,4 +25,5 @@
 ✅ Share state to nested routes\
 ✅ Sign Up\
 ✅ Sign In\
-✅ Generate JWT token
+✅ Generate JWT token\
+✅ Sign in to protected route
