@@ -26,4 +26,5 @@
 ✅ Sign Up\
 ✅ Sign In\
 ✅ Generate JWT token\
-✅ Sign in to protected route
+✅ Sign in to protected route\
+✅ CORS Layer
