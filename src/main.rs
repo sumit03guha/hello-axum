@@ -7,14 +7,17 @@ use std::{
 use axum::{
     body::Body,
     extract::{Path, Query, Request, State},
-    http::{StatusCode, Uri},
+    http::{
+        header::{AUTHORIZATION, CONTENT_TYPE},
+        HeaderValue, StatusCode, Uri,
+    },
     middleware::{from_fn, Next},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
     Extension, Form, Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{json, to_string_pretty};
+use serde_json::to_string_pretty;
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
@@ -24,8 +27,9 @@ use argon2::{
 use mongodb::{bson::doc, Client, Collection, Database};
 
 use jsonwebtoken::{
-    decode, encode, get_current_timestamp, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+    decode, encode, get_current_timestamp, DecodingKey, EncodingKey, Header, Validation,
 };
+use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Identity {
@@ -75,6 +79,11 @@ async fn db() -> Database {
 }
 
 fn app(database: Database) -> Router {
+    let cors_layer = CorsLayer::new()
+        .allow_methods(Any)
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE])
+        .allow_origin("0.0.0.4000".parse::<HeaderValue>().unwrap());
+
     let shared_state = Arc::new(Mutex::new(Counter { value: 1 }));
     let user_router = Router::new().route("/profile", get(profile));
     let about_router = Router::new().route("/about", get(about));
@@ -124,6 +133,7 @@ fn app(database: Database) -> Router {
         .with_state(Arc::clone(&shared_state))
         .nest("/auth", auth_router)
         .with_state(Arc::new(database))
+        .layer(cors_layer)
 }
 
 async fn hello_world() -> &'static str {
