@@ -27,4 +27,5 @@
 ✅ Sign In\
 ✅ Generate JWT token\
 ✅ Sign in to protected route\
-✅ CORS Layer
+✅ CORS Layer\
+✅ Share multiple state in single route
