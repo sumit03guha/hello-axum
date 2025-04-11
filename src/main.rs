@@ -90,7 +90,7 @@ fn app(database: Database) -> Router {
     let another_nested_shared_router: Router<Arc<Mutex<Counter>>> =
         Router::new().route("/new", get(nested_shared_route));
 
-    let auth_router = Router::new()
+    let auth_router: Router<(Arc<Mutex<Counter>>, Arc<Database>)> = Router::new()
         .route("/signup", post(signup))
         .route("/signin", post(signin))
         .route(
@@ -132,7 +132,7 @@ fn app(database: Database) -> Router {
         .nest("/nested", another_nested_shared_router)
         .with_state(Arc::clone(&shared_state))
         .nest("/auth", auth_router)
-        .with_state(Arc::new(database))
+        .with_state((Arc::clone(&shared_state), Arc::new(database)))
         .layer(cors_layer)
 }
 
@@ -285,7 +285,7 @@ async fn nested_shared_route(State(state): State<Arc<Mutex<Counter>>>) -> impl I
 }
 
 async fn signup(
-    State(database): State<Arc<Database>>,
+    State((_, database)): State<(Arc<Mutex<Counter>>, Arc<Database>)>,
     Json(input): Json<Auth>,
 ) -> impl IntoResponse {
     let salt: SaltString = SaltString::generate(&mut OsRng);
@@ -313,7 +313,7 @@ async fn signup(
 }
 
 async fn signin(
-    State(database): State<Arc<Database>>,
+    State((_, database)): State<(Arc<Mutex<Counter>>, Arc<Database>)>,
     Json(input): Json<Auth>,
 ) -> impl IntoResponse {
     let users_collection: Collection<Auth> = database.collection("users");
