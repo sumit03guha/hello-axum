@@ -54,10 +54,20 @@ struct Claims {
     exp: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 struct ResponseData<T> {
+    status: u16,
     message: String,
     data: T,
+}
+
+impl<T: Serialize> IntoResponse for ResponseData<T> {
+    fn into_response(self) -> Response {
+        let Ok(response) = serde_json::to_string(&self) else {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        };
+        Response::new(Body::from(response))
+    }
 }
 
 #[tokio::main]
@@ -309,7 +319,12 @@ async fn signup(
         .unwrap();
 
     println!("Inserted a document with _id: {}", result.inserted_id);
-    (StatusCode::OK, "User signed up")
+    // (StatusCode::OK, "User signed up")
+    ResponseData {
+        status: StatusCode::OK.as_u16(),
+        message: "User signed up".to_string(),
+        data: result.inserted_id,
+    }
 }
 
 async fn signin(
@@ -332,27 +347,33 @@ async fn signin(
         {
             let token = generate_token(&input.user_name);
             match token {
-                Ok(token) => {
-                    let result = ResponseData {
-                        message: "Signed in".to_string(),
-                        data: token,
-                    };
-                    (
-                        StatusCode::OK,
-                        Body::new(to_string_pretty(&result).unwrap()),
-                    )
-                        .into_response()
-                }
+                Ok(token) => ResponseData {
+                    status: StatusCode::OK.as_u16(),
+                    message: "Signed in".to_string(),
+                    data: token,
+                },
                 Err(e) => {
                     eprintln!("Error generating token : {}", e);
-                    (StatusCode::INTERNAL_SERVER_ERROR, "Error generating token").into_response()
+                    ResponseData {
+                        status: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                        message: "Error generating token".to_string(),
+                        data: "".to_string(),
+                    }
                 }
             }
         } else {
-            (StatusCode::UNAUTHORIZED, "Invalid password").into_response()
+            ResponseData {
+                status: StatusCode::UNAUTHORIZED.as_u16(),
+                message: "Invalid password".to_string(),
+                data: "".to_string(),
+            }
         }
     } else {
-        (StatusCode::NOT_FOUND, "User does not exist").into_response()
+        ResponseData {
+            status: StatusCode::NOT_FOUND.as_u16(),
+            message: "User does not exist".to_string(),
+            data: "".to_string(),
+        }
     }
 }
 
